@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include "hashtable.h"
 
+size_t my_hash(void* key, size_t key_size) {return 1;}
+
 void test_ht_hash() {
     char* key = "HE";
     size_t hash = _ht_hash(key, 2);
@@ -14,7 +16,33 @@ void test_ht_hash() {
 
 void test_ht_insertion() {
     t_hash_table* ht = ht_new(5);
+
     ht_insert(ht, "HE", "abc", 2, 3);
+
+    size_t size;
+    const void* value;
+
+
+    if (!(value = ht_lookup(ht, "HE", 2, &size))) {
+        fprintf(stderr, "[HashTable::ht_lookup/ht_insert] Error\nExpected value to be present\n");
+    }
+
+    if (size != 3
+        || strncmp(value, "abc", size) != 0) {
+        fprintf(stderr, "[HashTable::ht_lookup/ht_insert] Error\nInvalid key\n");
+    }
+
+    // Update value
+    ht_insert(ht, "HE", "abcd", 2, 4);
+
+
+    if (!(value = ht_lookup(ht, "HE", 2, &size))
+        || size != 4
+        || strncmp(value, "abcd", size) != 0) {
+        fprintf(stderr, "[HashTable::ht_lookup/ht_insert] Error\nOld value not updated\n");
+    }
+
+    ht_destroy(ht);
 }
 
 void test_ht_contains() {
@@ -28,22 +56,17 @@ void test_ht_contains() {
     if (ht_contains(ht, "HA", 2)) {
         fprintf(stderr, "[HashTable::ht_contains] Error\nExpected element %s not to be found\n", "HA");
     }
-}
 
-size_t my_hash(void* key, size_t key_size) {
-    return 1;
+    ht_destroy(ht);
 }
 
 void test_ht_custom_hash_function() {
     t_hash_table* ht = ht_new_c_hash(5, &my_hash);
     ht_insert(ht, "HE", "abc", 2, 3);
+    ht_destroy(ht);
 }
 
 int main() {
-
-    test_ht_hash();
     test_ht_insertion();
-    test_ht_contains();
-
     return 0;
 }
