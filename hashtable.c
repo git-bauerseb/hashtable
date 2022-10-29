@@ -8,6 +8,7 @@ t_hash_table* ht_new(size_t capacity) {
     table->hash_function = &_ht_hash;
 
     table->slots = (t_hash_table_entry**)calloc(capacity, sizeof(t_hash_table_entry*));
+    table->size = 0;
 
     return table;
 }
@@ -19,6 +20,15 @@ t_hash_table* ht_new_c_hash(size_t capacity, t_hash_function f) {
 }
 
 int ht_insert(t_hash_table* ht, void* key, void* value, size_t key_size, size_t value_size) {
+
+    assert(ht != NULL);
+    assert(key != NULL);
+
+    if (_ht_enlarge(ht)) {
+        _ht_rehash(ht, ht->capacity * HT_GROWTH_CONST);
+        ht->capacity *= HT_GROWTH_CONST;
+    }
+
     size_t hash = ht->hash_function(key, key_size);
     size_t position = (hash) % ht->capacity;
 
@@ -47,6 +57,7 @@ int ht_insert(t_hash_table* ht, void* key, void* value, size_t key_size, size_t 
     entry->value_size = value_size;
 
     entry->next = ht->slots[position];
+    entry->previous = NULL;
 
     if (ht->slots[position] != NULL) {
         ht->slots[position]->previous = entry;
@@ -96,6 +107,44 @@ void* ht_lookup(t_hash_table* ht, void* key, size_t key_size,size_t* value_size)
     return NULL;
 }
 
+int ht_delete(t_hash_table* ht, void* key, size_t key_size) {
+    assert(ht != NULL);
+    assert(key != NULL);
+
+    if (_ht_reduce(ht)) {
+        _ht_rehash(ht, ht->capacity / HT_SHRINK_CONST);
+        ht->capacity /= HT_SHRINK_CONST;
+    }
+
+    size_t hash = (ht->hash_function(key, key_size)) % ht->capacity;
+
+    for (t_hash_table_entry* entry = ht->slots[hash]; entry; entry = entry->next) {
+        if (_ht_key_match(entry->key, entry->key_size, key, key_size)) {
+            t_hash_table_entry* prev = entry->previous;
+            t_hash_table_entry* next = entry->next;
+
+            // If previous is NULL then element is the head
+            if (prev == NULL) {
+                ht->slots[hash] = entry->next;
+            } else {
+                prev->next = entry->next;
+            }
+
+            if (next != NULL && prev != NULL) {
+                prev->next = next;
+            }
+
+            free(entry->key);
+            free(entry->value);
+            free(entry);
+
+            return HT_DELETED;
+        }
+    }
+
+    return HT_NOT_CONTAINS;
+}
+
 void ht_destroy(t_hash_table* ht) {
     for (int i = 0; i < ht->capacity; i++) {
         if (ht->slots[i] != NULL) {
@@ -138,4 +187,42 @@ void _ht_destroy_slot(t_hash_table_entry* entry) {
         free(entry);
         entry = tmp;
     }
+}
+
+int _ht_rehash(t_hash_table* ht, size_t n_capacity) {
+    assert(ht != NULL);
+    assert(n_capacity > 0);
+
+    t_hash_table_entry** n_slots = (t_hash_table_entry**)calloc(n_capacity, sizeof(t_hash_table_entry*));
+
+    for (size_t i = 0; i < ht->capacity; i++) {
+        for (t_hash_table_entry* entry = ht->slots[i]; entry;) {
+            t_hash_table_entry* next = entry->next;
+
+            size_t n_hash = (ht->hash_function(entry->key, entry->key_size)) % n_capacity;
+
+            if (n_slots[n_hash] == NULL) {
+                n_slots[n_hash] = entry;
+                entry->previous = NULL;
+            } else {
+                n_slots[n_hash]->previous = entry;
+                entry->next = n_slots[n_hash];
+                n_slots[n_hash] = entry;
+            }
+            entry = next;
+        }
+    }
+
+    free(ht->slots);
+    ht->slots = n_slots;
+
+    return HT_SUCCESS;
+}
+
+int _ht_enlarge(t_hash_table* ht) {
+    return ht->capacity * HT_MAX_LOAD_FACTOR <= ht->size;
+}
+
+int _ht_reduce(t_hash_table* ht) {
+    return ht->size <= ht->capacity * (1 - HT_MAX_LOAD_FACTOR);
 }

@@ -8,20 +8,37 @@
 #define _HT_PRIME 251
 #define _HT_MODULUS 1000000009
 
-// Return value if element in hash table is updated
-#define HT_UPDATED 1
+#define HT_UPDATED 1        // element in hash table is updated
+#define HT_INSERTED 2       // element in hash table is inserted
 
-// Return value if element in hash table is inserted
-#define HT_INSERTED 2
+#define HT_CONTAINS 1       // hashtable contains an element
+#define HT_NOT_CONTAINS 0   // hashtable not contains an element
 
-// Return value when hashtable contains an element
-#define HT_CONTAINS 1
+#define HT_DELETED 1        // element was deleted
 
-// Return value when hashtable not contains an element
-#define HT_NOT_CONTAINS 0
+#define HT_SUCCESS 1        // Successful operation on hashtable
+#define HT_ERROR 0          // Unsuccessful operation on hashtable
+
+#define HT_INIT_CAPACITY 16  // Initial capacity of a hashtable if no
+                             // specific value is provided
+
+#define HT_GROWTH_CONST 2    // Multiplier by which the hashtable is enlarged
+#define HT_SHRINK_CONST 2    // Multiplier by which the hashtable is reduced
+
+#define HT_MAX_LOAD_FACTOR .75f     // Maximum load factor that is acceptable
+                                    // in the hashtable
+
+// Macros for easier use of hashtable
+#define FOREACH(key_, value_, table, code) \
+    for(int i = 0; i < table->capacity; i++) { \
+        for (t_hash_table_entry* entry = table->slots[i]; entry; entry = entry->next) { \
+            void* key_ = entry->key;      \
+            void* value_ = entry->value;  \
+            code                          \
+        }                                 \
+    }
 
 typedef size_t (*t_hash_function)(void* key, size_t key_size);
-
 
 // Represents an entry of a hashtable
 typedef struct hash_table_entry {
@@ -53,6 +70,7 @@ t_hash_table* ht_new(size_t capacity);
 // For an uniform distribution among the slots, a good hash function needs to be chosen.
 t_hash_table* ht_new_c_hash(size_t capacity, t_hash_function hash);
 
+int ht_delete(t_hash_table* ht, void* key, size_t key_size);
 
 // Destructors
 
@@ -82,6 +100,9 @@ int ht_contains(t_hash_table* ht, void* key, size_t key_size);
 // and the value_size parameter is set to 0.
 void* ht_lookup(t_hash_table* ht, void* key, size_t key_size, size_t* value_size);
 
+
+
+
 // Private functions
 
 // Checks if two keys match
@@ -91,5 +112,16 @@ size_t _ht_hash(void* mem_location, size_t length);
 
 // Destroy a single slot (including the linked-list that is formed by the slot element).
 void _ht_destroy_slot(t_hash_table_entry* entry);
+
+// Resize the provided hashtable such that it has n_capacity slots afterwards.
+// The elements are rehashed accordingly.
+int _ht_rehash(t_hash_table* ht, size_t n_capacity);
+
+
+// Determines whether the hashtable with the given size should be shrinked
+int _ht_reduce(t_hash_table* ht);
+
+// Determines whether the hashtable with the current size should be enlarged
+int _ht_enlarge(t_hash_table* ht);
 
 #endif
