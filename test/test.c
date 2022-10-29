@@ -112,10 +112,34 @@ void test_ht_foreach() {
           char* val = (char*)v;
           printf("%s=%s\n", key, val);
     })
+
+    ht_destroy(ht);
+}
+
+void test_ht_analysis() {
+
+    FILE* file = fopen("../test/i_files/words.txt", "r");
+    char* buffer = NULL;
+    size_t read;
+    ssize_t n_read;
+
+    t_hash_table* ht = ht_new_analyze(HT_INIT_CAPACITY);
+
+    while ((n_read = getline(&buffer, &read, file)) != -1) {
+        // Remove newline character from buffer
+        buffer[n_read-1] = '\0';
+        ht_insert(ht, buffer, "abcdef", n_read-1, 6);
+    }
+
+    ht_print_stats(ht);
+
+    free(buffer);
+    ht_destroy(ht);
 }
 
 int main() {
     // test_ht_delete();
-    test_ht_foreach();
+    // test_ht_foreach();
+    test_ht_analysis();
     return 0;
 }

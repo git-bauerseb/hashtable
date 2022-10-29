@@ -9,8 +9,14 @@ t_hash_table* ht_new(size_t capacity) {
 
     table->slots = (t_hash_table_entry**)calloc(capacity, sizeof(t_hash_table_entry*));
     table->size = 0;
+    table->stats = NULL;
 
     return table;
+}
+
+t_hash_table* ht_new_analyze(size_t capacity) {
+    t_hash_table* ht = ht_new(capacity);
+    ht->stats = calloc(capacity, sizeof(size_t));
 }
 
 t_hash_table* ht_new_c_hash(size_t capacity, t_hash_function f) {
@@ -65,6 +71,10 @@ int ht_insert(t_hash_table* ht, void* key, void* value, size_t key_size, size_t 
 
     ht->slots[position] = entry;
     ht->size++;
+
+    if (ht->stats != NULL) {
+        ht->stats[position]++;
+    }
 
     return HT_INSERTED;
 }
@@ -138,6 +148,10 @@ int ht_delete(t_hash_table* ht, void* key, size_t key_size) {
             free(entry->value);
             free(entry);
 
+            if (ht->stats != NULL) {
+                ht->stats[hash]--;
+            }
+
             return HT_DELETED;
         }
     }
@@ -152,8 +166,24 @@ void ht_destroy(t_hash_table* ht) {
         }
     }
 
+    if (ht->stats != NULL) {
+        free(ht->stats);
+    }
+
     free(ht->slots);
     free(ht);
+}
+
+void ht_print_stats(t_hash_table* ht) {
+    if (ht->stats != NULL) {
+        printf("[ ");
+
+        for (int i = 0; i < ht->capacity - 1; i++) {
+            printf(" %ld, ", ht->stats[i]);
+        }
+
+        printf(" %ld ]", ht->stats[ht->capacity-1]);
+    }
 }
 
 // Private functions
@@ -194,6 +224,11 @@ int _ht_rehash(t_hash_table* ht, size_t n_capacity) {
     assert(n_capacity > 0);
 
     t_hash_table_entry** n_slots = (t_hash_table_entry**)calloc(n_capacity, sizeof(t_hash_table_entry*));
+    size_t* n_stats;
+
+    if (ht->stats != NULL) {
+        n_stats = calloc(n_capacity, sizeof(size_t));
+    }
 
     for (size_t i = 0; i < ht->capacity; i++) {
         for (t_hash_table_entry* entry = ht->slots[i]; entry;) {
@@ -204,17 +239,24 @@ int _ht_rehash(t_hash_table* ht, size_t n_capacity) {
             if (n_slots[n_hash] == NULL) {
                 n_slots[n_hash] = entry;
                 entry->previous = NULL;
+                entry->next = NULL;
             } else {
                 n_slots[n_hash]->previous = entry;
                 entry->next = n_slots[n_hash];
                 n_slots[n_hash] = entry;
             }
             entry = next;
+            n_stats[n_hash]++;
         }
+    }
+
+    if (ht->stats != NULL) {
+        free(ht->stats);
     }
 
     free(ht->slots);
     ht->slots = n_slots;
+    ht->stats = n_stats;
 
     return HT_SUCCESS;
 }

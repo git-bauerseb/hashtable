@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 
 #define _HT_PRIME 251
 #define _HT_MODULUS 1000000009
@@ -25,7 +26,7 @@
 #define HT_GROWTH_CONST 2    // Multiplier by which the hashtable is enlarged
 #define HT_SHRINK_CONST 2    // Multiplier by which the hashtable is reduced
 
-#define HT_MAX_LOAD_FACTOR .75f     // Maximum load factor that is acceptable
+#define HT_MAX_LOAD_FACTOR 2.0f       // Maximum load factor that is acceptable
                                     // in the hashtable
 
 // Macros for easier use of hashtable
@@ -57,14 +58,19 @@ typedef struct hash_table {
     size_t capacity;                // Number of slots in the table
     size_t size;                    // Number of elements stored in the table
     t_hash_table_entry** slots;
-    t_hash_function hash_function;      // Hash function used
+    t_hash_function hash_function;  // Hash function used
 
+    size_t* stats;                  // Statistics for hash table
 } t_hash_table;
 
 // Constructors
 
 // Initialize a hashtable with the specified capacity.
 t_hash_table* ht_new(size_t capacity);
+
+// Initialize a hashtable with the specificied capacity.
+// Additionally, statistics about the hashtable is tracked.
+t_hash_table* ht_new_analyze(size_t capacity);
 
 // Initialize a hashtable with the specified capacity and a custom hash function.
 // For an uniform distribution among the slots, a good hash function needs to be chosen.
@@ -100,8 +106,9 @@ int ht_contains(t_hash_table* ht, void* key, size_t key_size);
 // and the value_size parameter is set to 0.
 void* ht_lookup(t_hash_table* ht, void* key, size_t key_size, size_t* value_size);
 
-
-
+// Print the distribution of the keys in the slots in the form of a python array.
+// Can be used for plotting.
+void ht_print_stats(t_hash_table* ht);
 
 // Private functions
 

@@ -48,3 +48,27 @@ FOREACH(k, v, ht, {
       // lmn=910
 })
 ```
+
+### Analysis of hashtable
+
+The hashtable implementation provides simple analysis tools to visualize the distribution of the keys.
+For example, if the hash function
+
+```c
+size_t my_hash(void* key, size_t key_size) {
+    return 1;
+}
+```
+
+is used, every key gets stored in the position 1.
+For a word list with the 9894 most common english words you get this plot:
+
+![](./imgs/constant_hash.png)
+
+which essentially shows a linked list.
+
+If you use the standard hash implementation, you get
+
+![](./imgs/better_hash.png)
+
+which looks much more uniform. At most 7 keys are stored in one slot and thus the search is essentially constant.
