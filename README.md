@@ -28,7 +28,7 @@ int main() {
 
 ### Useful macros
 
-To ease the use of the hashtable, you can use useful macros like the `FOREACH` macro:
+To ease the use of the hashtable, you can use macros like `FOREACH`:
 
 ```c
 t_hash_table* ht = ht_new(HT_INIT_CAPACITY);
